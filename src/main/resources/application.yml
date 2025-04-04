@@ -1,0 +1,9 @@
+prometheus:
+  url: http://101.202.0.7:30090/
+  query:
+    range: 5m
+  query-range:
+    step: 5m
+
+webclient:
+  max-in-memory-size: 5242880   #5 * 1024 * 1024  5MB
