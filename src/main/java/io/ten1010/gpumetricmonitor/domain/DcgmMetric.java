@@ -8,53 +8,41 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DcgmMetric {
-    private List<Metric> dcgmGpuUtilList;
-    private List<Metric> dcgmGpuTempList;
-    private List<Metric> dcgmMemTempList;
+    private Map<String, List<Metric>> dcgmMetricMap = new HashMap<>();
 
     @Builder
-    private DcgmMetric(List<Metric> dcgmGpuUtil, List<Metric> dcgmGpuTemp, List<Metric> dcgmMemTemp) {
-        this.dcgmGpuUtilList = dcgmGpuUtil;
-        this.dcgmGpuTempList = dcgmGpuTemp;
-        this.dcgmMemTempList = dcgmMemTemp;
+    private DcgmMetric(Map<String, List<Metric>> dcgmMetricMap) {
+        this.dcgmMetricMap = dcgmMetricMap;
     }
 
-    public static DcgmMetric of(String dcgmGpuUtilJson, String dcgmGpuTempJson, String dcgmMemTempJson) {
-        MetricParser gpuUtilParser = new DcgmMetricParser();
-        MetricParser gpuTempParser = new DcgmMetricParser();
-        MetricParser memTempParser = new DcgmMetricParser();
 
-        gpuUtilParser.parser(dcgmGpuUtilJson);
-        gpuTempParser.parser(dcgmGpuTempJson);
-        memTempParser.parser(dcgmMemTempJson);
+    public static DcgmMetric ofmap(Map<String, String> dcgmMetricMap) {
+        Map<String, List<Metric>> parsedMetrics = new HashMap<>();
+
+        dcgmMetricMap.forEach((label, json) -> {
+            MetricParser parser = new DcgmMetricParser();
+            parser.parser(json);
+            parsedMetrics.put(label, parser.getMetricValues());
+        });
 
         return DcgmMetric.builder()
-                .dcgmGpuUtil(gpuUtilParser.getMetricValues())
-                .dcgmGpuTemp(gpuTempParser.getMetricValues())
-                .dcgmMemTemp(memTempParser.getMetricValues())
+                .dcgmMetricMap(parsedMetrics)
                 .build();
     }
 
     public void print() {
-        log.info("GPU 평균 사용률");
-        dcgmGpuUtilList.forEach(dcgmGpuUtil -> {
-            log.info("{} = {}", dcgmGpuUtil.getMetricName(), dcgmGpuUtil.getValue());
-        });
-
-        log.info("GPU 평균 온도");
-        dcgmGpuTempList.forEach(dcgmGpuTemp -> {
-            log.info("{} = {}", dcgmGpuTemp.getMetricName(), dcgmGpuTemp.getValue());
-        });
-
-        log.info("메모리 평균 온도");
-        dcgmMemTempList.forEach(dcgmMemTemp -> {
-            log.info("{} = {}", dcgmMemTemp.getMetricName(), dcgmMemTemp.getValue());
+        dcgmMetricMap.forEach((key, valueList) -> {
+            log.info("Metric Group: {}", key);
+            valueList.forEach(metric ->
+                    log.info("{} = {}", metric.getMetricName(), metric.getValue()));
         });
     }
 }
