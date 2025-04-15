@@ -9,17 +9,17 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ThresholdQuery implements PrometheusQuery {
     String metricName;
-    double threshold;
+    CompareMetricValue threshold;
     String label;
 
     @Builder
-    private ThresholdQuery(String metricName, double threshold, String label) {
+    private ThresholdQuery(String metricName, CompareMetricValue threshold, String label) {
         this.metricName = metricName;
         this.threshold = threshold;
         this.label = label;
     }
 
-    public static ThresholdQuery createThresholdQuery(String metricName, double threshold, String label) {
+    public static ThresholdQuery createThresholdQuery(String metricName, CompareMetricValue threshold, String label) {
         return ThresholdQuery.builder()
                 .metricName(metricName)
                 .threshold(threshold)
@@ -31,8 +31,8 @@ public class ThresholdQuery implements PrometheusQuery {
     @Override
     public String buildQuery(String queryRange) {
         return String.format(
-                "avg by(gpu, instance) (avg_over_time(%s[%s])) >= %.1f",
-                metricName, queryRange, threshold
+                "avg by(gpu, instance) (avg_over_time(%s[%s])) %s %.1f",
+                metricName, queryRange, threshold.getCompareType().getCompareType(), threshold.getValue()
         );
     }
 
