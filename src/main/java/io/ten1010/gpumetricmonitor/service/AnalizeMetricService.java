@@ -54,7 +54,7 @@ public class AnalizeMetricService implements ApplicationRunner {
                     90, "이상",
                     50, "이하",
                     0, "초과");
-
+            //사용자로부터 설정된 표준편차 값
             GpuStddev gpuStddev = GpuStddev.createStddev(
                     30, "이상",
                     20, "이상",
