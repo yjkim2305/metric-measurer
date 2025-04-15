@@ -24,7 +24,7 @@ public class DcgmMetric {
     }
 
 
-    public static DcgmMetric ofmap(Map<String, String> dcgmMetricMap) {
+    public static DcgmMetric createByMap(Map<String, String> dcgmMetricMap) {
         Map<String, List<Metric>> parsedMetrics = new HashMap<>();
 
         dcgmMetricMap.forEach((label, json) -> {

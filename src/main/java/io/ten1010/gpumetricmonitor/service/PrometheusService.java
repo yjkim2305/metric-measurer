@@ -1,6 +1,7 @@
 package io.ten1010.gpumetricmonitor.service;
 
 import io.ten1010.gpumetricmonitor.domain.DcgmMetric;
+import io.ten1010.gpumetricmonitor.domain.PrometheusQuery;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,7 +13,6 @@ import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
-import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -23,6 +23,9 @@ public class PrometheusService {
 
     @Value("${prometheus.query-range.step}")
     private String queryRangeStep;
+
+    @Value("${prometheus.query.range}")
+    private String queryRange;
 
     public Mono<String> getMetric(String query, long startTime, long endTime) {
         return webClient.get()
@@ -37,24 +40,22 @@ public class PrometheusService {
                 .bodyToMono(String.class);
     }
 
-    public Mono<DcgmMetric> fetchAllMetrics(List<String> queryList, long startTime, long endTime) {
+    public Mono<DcgmMetric> fetchAllMetrics(List<PrometheusQuery> queryList, long startTime, long endTime) {
         return Flux.fromIterable(queryList)
                 .index()
                 .parallel()
                 .runOn(Schedulers.boundedElastic())
-                .flatMap(tuple ->
-                        getMetric(tuple.getT2(), startTime, endTime)
-                                .map(result -> Tuples.of(tuple.getT1(), result))
+                .flatMap(tuple -> {
+                            long index = tuple.getT1();
+                            PrometheusQuery query = tuple.getT2();
+                            return getMetric(query.buildQuery(queryRange), startTime, endTime)
+                                    .map(result -> Tuples.of(query.getLabel(), result));
+                        }
                 )
                 .sequential()
-                .sort(Comparator.comparing(Tuple2::getT1))
-                .map(Tuple2::getT2)
-                .collectList()
-                .map(results -> DcgmMetric.of(
-                        results.get(0),
-                        results.get(1),
-                        results.get(2)
-                ));
+                .collectMap(Tuple2::getT1, Tuple2::getT2)
+                .map(DcgmMetric::createByMap);
+
     }
 
 }
